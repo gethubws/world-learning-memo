@@ -1,5 +1,5 @@
 // Only the public interface is cached. Records live in IndexedDB; legacy account APIs never enter this cache.
-const CACHE = 'world-memo-shell-v2';
+const CACHE = 'world-memo-shell-v3';
 const permittedAsset = (url) =>
   url.origin === self.location.origin &&
   !/^\/(?:api|signin-with-chatgpt|signout-with-chatgpt|callback)(?:\/|$)/.test(

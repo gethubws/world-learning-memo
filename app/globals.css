@@ -1681,3 +1681,51 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* Topic conversations share the editor's quiet surfaces and compact mobile rhythm. */
+.topic-chat { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.chat-toolbar, .chat-composer-actions, .chat-message-meta, .chat-bottom-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.chat-toolbar > div { min-width: 0; }
+.chat-toolbar strong { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+.chat-toolbar .hint { display: block; overflow-wrap: anywhere; margin: 4px 0 0; }
+.chat-toolbar button { flex-shrink: 0; }
+.chat-history {
+  height: clamp(260px, 43dvh, 580px); min-height: 240px; overflow-y: auto;
+  overscroll-behavior: contain; padding: 10px 5px; scrollbar-gutter: stable;
+}
+.chat-empty { display: grid; justify-items: center; gap: 13px; text-align: center; padding: 32px 15px; }
+.chat-empty p { font-size: 1.125rem; font-weight: 600; margin: 0; }
+.chat-empty span { font-size: .875rem; line-height: 1.7; color: var(--muted-foreground); max-width: 340px; }
+.chat-message { border: 1px solid var(--border); border-radius: 15px; padding: 10px 14px 16px; margin: 0 0 16px; }
+.chat-user { background: var(--muted); margin-left: 26px; }
+.chat-assistant { background: var(--background); margin-right: 8px; }
+.chat-message-meta { color: var(--muted-foreground); font-size: .8125rem; margin-bottom: 7px; min-height: 30px; }
+.chat-message-meta button { min-height: 32px; height: 32px; padding: 5px 8px; }
+.chat-message-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1rem; line-height: 1.85; }
+.chat-storage-status { font-size: .8125rem; color: var(--muted-foreground); }
+.chat-composer { border: 1px solid var(--border); background: var(--background); border-radius: 16px; padding: 11px; }
+.chat-composer textarea { min-height: 88px; max-height: 200px; resize: vertical; font-size: 1rem; border: 0; box-shadow: none; background: transparent; padding: 7px; }
+.chat-composer-actions { margin-top: 9px; }
+.chat-composer-actions .check-label { font-size: .875rem; gap: 7px; }
+.chat-bottom-actions { justify-content: flex-start; flex-wrap: wrap; }
+.chat-note-preview { padding: 15px; border: 1px solid var(--border); border-radius: 15px; }
+.chat-note-preview h3 { margin: 0 0 12px; font-size: 1rem; }
+.chat-note-preview textarea { min-height: 260px; font-size: 1rem; line-height: 1.8; margin-bottom: 12px; }
+.ai-settings-dialog { max-height: 90dvh; overflow-y: auto; }
+.ai-settings-form { display: flex; flex-direction: column; gap: 13px; }
+.ai-settings-form label { display: flex; flex-direction: column; gap: 7px; font-size: .875rem; }
+.ai-settings-form input, .ai-settings-form select { min-height: 44px; font-size: 1rem; }
+.ai-settings-form select { border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--background); color: var(--foreground); }
+.ai-settings-form .hint { font-size: .8125rem; line-height: 1.65; margin: 0; overflow-wrap: anywhere; }
+.ai-settings-form summary { cursor: pointer; font-size: .875rem; padding: 8px 0; }
+.ai-price-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.editor-tabs { max-width: none; }
+@media (max-width: 760px) {
+  .chat-history { height: 40dvh; }
+  .chat-user { margin-left: 16px; }
+  .chat-assistant { margin-right: 0; }
+  .chat-bottom-actions button { font-size: .875rem; }
+  .copy-actions { flex-wrap: wrap; }
+}

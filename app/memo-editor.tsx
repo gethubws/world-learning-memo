@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import {
   Copy,
   Save,
@@ -10,6 +10,7 @@ import {
   Check,
   RotateCw,
   PencilLine,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +52,7 @@ import {
   publicSourceUrl,
   type ChatImport,
 } from '@/lib/chat-import';
+const TopicChatPanel = lazy(() => import('./topic-chat'));
 
 export default function MemoEditor({
   node,
@@ -69,6 +71,7 @@ export default function MemoEditor({
   const childProgress = subtopicProgress(subtopics, summaries);
   const [doc, setDoc] = useState<Memo | null>(null);
   const [notice, setNotice] = useState('正在读取…');
+  const [tab, setTab] = useState('overview');
   const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState<SavedMemo | null>(null);
   const [pointTitle, setPointTitle] = useState('');
@@ -384,6 +387,9 @@ export default function MemoEditor({
       <span className="eyebrow">{node.code}</span>
       <h2>{doc?.title || node.title}</h2>
       <div className="action-row copy-actions">
+        <Button variant="outline" onClick={() => setTab('chat')} disabled={!doc}>
+          <MessageCircle />和 AI 聊这个主题
+        </Button>
         <Button onClick={() => void copy(true)}>
           <Copy />
           复制给教学 AI
@@ -456,7 +462,7 @@ export default function MemoEditor({
               </div>
             </div>
           )}
-          <Tabs defaultValue="overview">
+          <Tabs value={tab} onValueChange={(value) => setTab(String(value))}>
             <TabsList className="editor-tabs">
               <TabsTrigger value="overview">学习进度</TabsTrigger>
               <TabsTrigger value="points">
@@ -465,7 +471,32 @@ export default function MemoEditor({
               <TabsTrigger value="notes">
                 笔记{doc.note ? ' · 有内容' : ''}
               </TabsTrigger>
+              <TabsTrigger value="chat">AI 对话</TabsTrigger>
             </TabsList>
+            <TabsContent value="chat" className="editor-tab-panel" keepMounted>
+              <Suspense fallback={<p className="notice">正在打开对话…</p>}>
+                <TopicChatPanel node={node} memo={doc} onActivity={() => {
+                  if (current.current && !blocked.current && !revision.current)
+                    update({ ...current.current });
+                }} onAppendNote={(text) => {
+                  const latest = current.current;
+                  if (!latest || blocked.current) {
+                    toast.error('请先处理笔记保存问题，再追加草稿');
+                    return false;
+                  }
+                  try {
+                    const note = `${latest.note}${latest.note ? '\n\n---\n\n' : ''}## AI 学习讨论整理\n\n${text}`;
+                    update(validateMemo({ ...latest, note }));
+                    setTab('notes');
+                    toast.success('已追加到笔记，正在保存到本机');
+                    return true;
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                    return false;
+                  }
+                }} />
+              </Suspense>
+            </TabsContent>
             <TabsContent value="overview" className="editor-tab-panel">
               <section className="completion-card">
                 <div className="completion-heading">

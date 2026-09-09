@@ -69,6 +69,8 @@ import {
 } from '@/lib/records';
 import { allDrafts, saveDraft, type Draft } from '@/lib/drafts';
 import { registerMemoTools } from '@/lib/webmcp';
+import { chatStore, flushChatSaves } from '@/lib/chat-store';
+import { validateChatBackup, type TopicChat } from '@/lib/topic-chat';
 const MemoEditor = lazy(() => import('./memo-editor'));
 import {
   recommendTopics,
@@ -104,6 +106,7 @@ type InstallEvent = Event & {
 };
 type ImportPlan = {
   records: Memo[];
+  chats: TopicChat[];
   drafts: { record: Memo; baseRevision: number }[];
   unknown: number;
 };
@@ -340,15 +343,18 @@ export default function Workspace() {
         cursor = page.nextCursor;
       } while (cursor);
       const local = await allDrafts(profile);
+      await flushChatSaves();
+      const chats = await chatStore().all();
       download(
         `世界知识-学习备份-${new Date().toISOString().slice(0, 10)}.json`,
         JSON.stringify(
           {
             format: 'world-learning-memo',
-            schemaVersion: 1,
+            schemaVersion: 2,
             catalogueVersion,
             exportedAt: new Date().toISOString(),
             records,
+            chats,
             drafts: local.map((d) => ({
               record: d.record,
               baseRevision: d.baseRevision,
@@ -360,7 +366,7 @@ export default function Workspace() {
         'application/json',
       );
       toast.success(
-        `已导出 ${records.length} 条本机记录和 ${local.length} 份草稿`,
+        `已导出 ${records.length} 条记录、${chats.length} 份对话和 ${local.length} 份草稿`,
       );
     } catch (e) {
       toast.error((e as Error).message);
@@ -374,6 +380,7 @@ export default function Workspace() {
       if (file.size > 50_000_000) throw new Error('备份超过 50 MB，请分批处理');
       const data = JSON.parse(await file.text());
       const records = validateBackup(data);
+      const chats = validateChatBackup(data.chats);
       const raw = data.drafts || [];
       if (!Array.isArray(raw) || raw.length > 10000)
         throw new Error('草稿列表格式不正确');
@@ -387,10 +394,12 @@ export default function Workspace() {
       const known = (r: Memo) => !!nodeMap.get(r.uid)?.trackable;
       setImportPlan({
         records: records.filter(known),
+        chats: chats.filter((chat) => !!nodeMap.get(chat.uid)?.trackable),
         drafts: ds.filter((d) => known(d.record)),
         unknown:
           records.filter((r) => !known(r)).length +
-          ds.filter((d) => !known(d.record)).length,
+          ds.filter((d) => !known(d.record)).length +
+          chats.filter((chat) => !nodeMap.get(chat.uid)?.trackable).length,
       });
     } catch (e) {
       toast.error((e as Error).message);
@@ -401,7 +410,8 @@ export default function Workspace() {
     setBusy(true);
     let added = 0,
       skipped = 0,
-      localAdded = 0;
+      localAdded = 0,
+      chatsAdded = 0;
     try {
       for (const record of importPlan.records) {
         try {
@@ -428,10 +438,16 @@ export default function Workspace() {
         ids.add(d.record.uid);
         localAdded++;
       }
+      const existingChats = new Set((await chatStore().all()).map((chat) => chat.uid));
+      for (const chat of importPlan.chats) {
+        if (existingChats.has(chat.uid)) { skipped++; continue; }
+        await chatStore().write(chat, 0);
+        chatsAdded++;
+      }
       setImportPlan(null);
       await refresh();
       toast.success(
-        `已导入 ${added} 条记录、${localAdded} 份草稿；跳过 ${skipped} 条已有内容`,
+        `已导入 ${added} 条记录、${chatsAdded} 份对话、${localAdded} 份草稿；跳过 ${skipped} 条已有内容`,
       );
     } catch (e) {
       toast.error(
@@ -1071,7 +1087,7 @@ export default function Workspace() {
           <section>
             <h3>学习记录备份</h3>
             <p>
-              备份包括标题、完成度、知识点、聊天原文和本机草稿。换手机或整理大量内容前，可以留一份文件。
+              备份包括标题、完成度、知识点、聊天原文、站内 AI 对话和本机草稿，不包含 Key。换手机或整理大量内容前，可以留一份文件。
             </p>
             <div className="action-row">
               <Button
@@ -1101,7 +1117,7 @@ export default function Workspace() {
               <div className="import-preview">
                 <strong>
                   待导入：{importPlan.records.length} 条记录，
-                  {importPlan.drafts.length} 份草稿
+                  {importPlan.chats.length} 份对话，{importPlan.drafts.length} 份草稿
                 </strong>
                 <p>
                   只补充本机缺少的记录，已有记录保留。不同的草稿会在打开主题时提示合并。

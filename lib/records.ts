@@ -127,7 +127,7 @@ export function validateBackup(value: unknown): Memo[] {
   if (
     !b ||
     b.format !== 'world-learning-memo' ||
-    b.schemaVersion !== 1 ||
+    ![1, 2].includes(b.schemaVersion || 0) ||
     !Array.isArray(b.records) ||
     b.records.length > 10000
   )
